@@ -176,6 +176,50 @@ class MiddlewareTest(TestCase):
         # Validate result
         self.assertFalse(pre_save.has_listeners(LogEntry))
 
+    def test_request_client(self):
+        """The client will be logged when a header AUDITLOG_CLIENT is present."""
+        # Create a request
+        request = self.factory.get('/')
+        request.META['AUDITLOG_CLIENT'] = 'aclientid'
+
+        # Run middleware
+        self.middleware.process_request(request)
+
+        # Validate result
+        self.assertTrue(pre_save.has_listeners(LogEntry))
+
+        # Finalize transaction
+        self.middleware.process_exception(request, None)
+
+    def test_response_client(self):
+        """The signal will be disconnected when the request is processed."""
+        # Create a request
+        request = self.factory.get('/')
+        request.META['AUDITLOG_CLIENT'] = 'aclientid'
+
+        # Run middleware
+        self.middleware.process_request(request)
+        self.assertTrue(pre_save.has_listeners(LogEntry))  # The signal should be present before trying to disconnect it.
+        self.middleware.process_response(request, HttpResponse())
+
+        # Validate result
+        self.assertFalse(pre_save.has_listeners(LogEntry))
+
+    def test_exception_client(self):
+        """The signal will be disconnected when an exception is raised."""
+        # Create a request
+        request = self.factory.get('/')
+        request.META['AUDITLOG_CLIENT'] = 'aclientid'
+
+        # Run middleware
+        self.middleware.process_request(request)
+        self.assertTrue(pre_save.has_listeners(LogEntry))  # The signal should be present before trying to disconnect it.
+        self.middleware.process_exception(request, ValidationError("Test"))
+
+        # Validate result
+        self.assertFalse(pre_save.has_listeners(LogEntry))
+
+
 
 class SimpeIncludeModelTest(TestCase):
     """Log only changes in include_fields"""

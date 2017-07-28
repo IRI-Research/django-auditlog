@@ -33,6 +33,7 @@ class AuditlogMiddleware(MiddlewareMixin):
         # Initialize thread local storage
         threadlocal.auditlog = {
             'signal_duid': (self.__class__, time.time()),
+            'signal_duid_client': (self.__class__, time.time(), 'client'),
             'remote_addr': request.META.get('REMOTE_ADDR'),
         }
 
@@ -44,6 +45,12 @@ class AuditlogMiddleware(MiddlewareMixin):
         if hasattr(request, 'user') and hasattr(request.user, 'is_authenticated') and request.user.is_authenticated():
             set_actor = curry(self.set_actor, user=request.user, signal_duid=threadlocal.auditlog['signal_duid'])
             pre_save.connect(set_actor, sender=LogEntry, dispatch_uid=threadlocal.auditlog['signal_duid'], weak=False)
+        
+        # Connect signal for client logging
+        if request.META.get('HTTP_AUDITLOG_CLIENT'):
+            set_client = curry(self.set_client, client=request.META.get('HTTP_AUDITLOG_CLIENT'), signal_duid=threadlocal.auditlog['signal_duid'])
+            pre_save.connect(set_client, sender=LogEntry, dispatch_uid=threadlocal.auditlog['signal_duid_client'], weak=False)
+
 
     def process_response(self, request, response):
         """
@@ -51,6 +58,7 @@ class AuditlogMiddleware(MiddlewareMixin):
         """
         if hasattr(threadlocal, 'auditlog'):
             pre_save.disconnect(sender=LogEntry, dispatch_uid=threadlocal.auditlog['signal_duid'])
+            pre_save.disconnect(sender=LogEntry, dispatch_uid=threadlocal.auditlog['signal_duid_client'])
 
         return response
 
@@ -60,6 +68,7 @@ class AuditlogMiddleware(MiddlewareMixin):
         """
         if hasattr(threadlocal, 'auditlog'):
             pre_save.disconnect(sender=LogEntry, dispatch_uid=threadlocal.auditlog['signal_duid'])
+            pre_save.disconnect(sender=LogEntry, dispatch_uid=threadlocal.auditlog['signal_duid_client'])
 
         return None
 
@@ -80,3 +89,11 @@ class AuditlogMiddleware(MiddlewareMixin):
             instance.actor = user
         if hasattr(threadlocal, 'auditlog'):
             instance.remote_addr = threadlocal.auditlog['remote_addr']
+
+    @staticmethod
+    def set_client(client, sender, instance, signal_duid, **kwargs):
+        if signal_duid != threadlocal.auditlog['signal_duid']:
+            return
+
+        if sender == LogEntry and client and instance.client is None:
+            instance.client = client
