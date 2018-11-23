@@ -183,10 +183,10 @@ class MiddlewareTest(TestCase):
         self.assertFalse(pre_save.has_listeners(LogEntry))
 
     def test_request_client(self):
-        """The client will be logged when a header AUDITLOG_CLIENT is present."""
+        """The client will be logged when a header HTTP_AUDITLOG_CLIENT is present."""
         # Create a request
         request = self.factory.get('/')
-        request.META['AUDITLOG_CLIENT'] = 'aclientid'
+        request.META['HTTP_AUDITLOG_CLIENT'] = 'aclientid'
 
         # Run middleware
         self.middleware.process_request(request)
@@ -201,7 +201,7 @@ class MiddlewareTest(TestCase):
         """The signal will be disconnected when the request is processed."""
         # Create a request
         request = self.factory.get('/')
-        request.META['AUDITLOG_CLIENT'] = 'aclientid'
+        request.META['HTTP_AUDITLOG_CLIENT'] = 'aclientid'
 
         # Run middleware
         self.middleware.process_request(request)
@@ -215,7 +215,7 @@ class MiddlewareTest(TestCase):
         """The signal will be disconnected when an exception is raised."""
         # Create a request
         request = self.factory.get('/')
-        request.META['AUDITLOG_CLIENT'] = 'aclientid'
+        request.META['HTTP_AUDITLOG_CLIENT'] = 'aclientid'
 
         # Run middleware
         self.middleware.process_request(request)

@@ -11,3 +11,5 @@ venv/
 .tox/
 local_settings.py
 dist/
+.envrc
+.direnv/
